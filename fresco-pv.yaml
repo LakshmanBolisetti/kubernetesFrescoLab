@@ -5,8 +5,8 @@ metadata:
 spec:
   storageClassName: manual
   capacity:
-    storage: 100Mi
+    storage: 100M
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: /tmp/fresco
+    path: "/tmp/fresco"
