@@ -1,0 +1,406 @@
+ConfigMaps
+In this hands-on, you are going to work on Kubernetes ConfigMaps, Secrets, Persistence Storage, and Persistent Storage Claims.
+Environment Setup
+	• Check whether Docker & Minikube are properly installed and configured.
+	• Start Minikube and execute this command to sync host docker with Minikube:
+
+javascript
+CopyEdit
+minikube -p minikube docker-env
+eval $(minikube docker-env)
+
+Step 1:
+Create a ConfigMap named fresco-config:
+
+go
+CopyEdit
+Add key `SERVER_URL`
+Add value `https://www.fresco.me`
+Verify if the ConfigMap is created.
+Step 2:
+Create an nginx pod with the environmental variable SERVER_URL_ENV.
+Use the ConfigMap created earlier and assign the value to it. Use the below template:
+
+yaml
+CopyEdit
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fresco-nginx-pod
+spec:
+  containers:
+    - name: fresco-nginx-container
+      image: nginx
+      env: fetch the value of SERVER_URL_ENV from previous ConfigMap
+Test your configuration by executing this command:
+
+bash
+CopyEdit
+kubectl exec -it fresco-nginx-pod -- sh -c env | grep SERVER_URL_ENV
+It should display: https://www.fresco.me
+
+Secrets
+Step 1:
+Create a Secret fresco-secret using:
+
+makefile
+CopyEdit
+data:
+user: admin
+pass: pass
+Step 2:
+Modify the above nginx pod to add the fresco-secret and mountPath /etc/test.
+	• Use this command to check if the pod and secret are successfully configured:
+
+bash
+CopyEdit
+kubectl exec -it fresco-nginx-pod -- sh -c "cat /etc/test/* | base64 -d"
+
+It should display both username & password.
+
+Persistence Volume
+	1. Create a PV named fresco-pv using the following parameters:
+
+bash
+CopyEdit
+storageClassName - manual
+capacity - 100MB
+accessMode - ReadWriteOnce
+hostPath - /tmp/fresco
+	2. Create a PVC named fresco-pvc, and request for 50MB.
+To verify successful creation, ensure it is bound to fresco-pv.
+	3. Modify the nginx pod named fresco-nginx-pod using the following parameters:
+	4. Request for fresco-pvc as a volume.
+Use /usr/share/nginx/html for mount path.
+
+markdown
+CopyEdit
+**Hint:** Use `kubectl describe pod fresco-nginx-pod` for debugging.
+RBAC
+In this section, you will create a user emp and assign read rights on pods belonging to the namespace dev.
+	1. Create a namespace named dev.
+Use openssl, and create a private key named emp.key.
+	2. Create a certificate signing request named emp.csr using the private key generated earlier.
+Use the following information:
+
+makefile
+CopyEdit
+name: emp
+group: dev
+	3. Generate emp.crt by approving the request created earlier.
+	4. Create a new context pointing to the cluster minkube, and name it dev-ctx.
+It should point to the namespace dev, and the user should be emp.
+	5. Set credentials for emp using emp.key and emp.crt created earlier.
+	6. Create a role named emp-role and assign get, list access on pods and deployments (use dev namespace).
+
+
+
+
+Environment Setup
+	1. Check Docker and Minikube Installation:
+		○ Verify Docker is installed:
+bash
+Copy
+docker --version
+		○ Verify Minikube is installed:
+bash
+Copy
+minikube version
+	2. Start Minikube:
+		○ Start Minikube:
+bash
+Copy
+minikube start
+		○ Sync host Docker with Minikube Docker:
+bash
+Copy
+minikube -p minikube docker-env
+eval $(minikube docker-env)
+
+Step 1: Create a ConfigMap
+	1. Create a ConfigMap named fresco-config:
+		○ Use the following command to create the ConfigMap:
+bash
+Copy
+kubectl create configmap fresco-config --from-literal=SERVER_URL=https://www.fresco.me
+	2. Verify the ConfigMap:
+		○ Check if the ConfigMap is created:
+bash
+Copy
+kubectl get configmap fresco-config
+		○ View the details of the ConfigMap:
+bash
+Copy
+kubectl describe configmap fresco-config
+
+Step 2: Create an Nginx Pod with ConfigMap
+	1. Create a Pod YAML File:
+		○ Create a file named fresco-nginx-pod.yaml with the following content:
+yaml
+Copy
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fresco-nginx-pod
+spec:
+  containers:
+    - name: fresco-nginx-container
+      image: nginx
+      env:
+        - name: SERVER_URL_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: fresco-config
+              key: SERVER_URL
+	2. Apply the Pod:
+		○ Apply the YAML file to create the pod:
+bash
+Copy
+kubectl apply -f fresco-nginx-pod.yaml
+	3. Verify the Environment Variable:
+		○ Check if the environment variable is set correctly:
+bash
+Copy
+kubectl exec -it fresco-nginx-pod -- sh -c "env | grep SERVER_URL_ENV"
+		○ Expected output:
+Copy
+SERVER_URL_ENV=https://www.fresco.me
+
+Step 3: Create a Secret
+	1. Create a Secret named fresco-secret:
+		○ Use the following command to create the Secret:
+bash
+Copy
+echo -n 'admin' | base64
+echo -n 'pass' | base64
+		○ Create a file named fresco-secret.yaml with the following content:
+yaml
+Copy
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fresco-secret
+type: Opaque
+data:
+  user: YWRtaW4=  # base64 encoded 'admin'
+  pass: cGFzcw==  # base64 encoded 'pass'
+	2. Apply the Secret:
+		○ Apply the YAML file to create the Secret:
+bash
+Copy
+kubectl apply -f fresco-secret.yaml
+	3. Modify the Nginx Pod to Use the Secret:
+		○ Update the fresco-nginx-pod.yaml file to include the Secret:
+yaml
+Copy
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fresco-nginx-pod
+spec:
+  containers:
+    - name: fresco-nginx-container
+      image: nginx
+      env:
+        - name: SERVER_URL_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: fresco-config
+              key: SERVER_URL
+      volumeMounts:
+        - name: secret-volume
+          mountPath: /etc/test
+          readOnly: true
+  volumes:
+    - name: secret-volume
+      secret:
+        secretName: fresco-secret
+	4. Apply the Updated Pod:
+		○ Apply the updated YAML file:
+bash
+Copy
+kubectl apply -f fresco-nginx-pod.yaml
+	5. Verify the Secret:
+		○ Check if the Secret is mounted correctly:
+bash
+Copy
+kubectl exec -it fresco-nginx-pod -- sh -c "cat /etc/test/* | base64 -d"
+		○ Expected output:
+Copy
+admin
+pass
+
+Step 4: Create a Persistent Volume (PV) and Persistent Volume Claim (PVC)
+	1. Create a Persistent Volume (PV):
+		○ Create a file named fresco-pv.yaml with the following content:
+yaml
+Copy
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: fresco-pv
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 100Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /tmp/fresco
+	2. Apply the PV:
+		○ Apply the YAML file to create the PV:
+bash
+Copy
+kubectl apply -f fresco-pv.yaml
+	3. Create a Persistent Volume Claim (PVC):
+		○ Create a file named fresco-pvc.yaml with the following content:
+yaml
+Copy
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fresco-pvc
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Mi
+	4. Apply the PVC:
+		○ Apply the YAML file to create the PVC:
+bash
+Copy
+kubectl apply -f fresco-pvc.yaml
+	5. Verify the PVC is Bound:
+		○ Check if the PVC is bound to the PV:
+bash
+Copy
+kubectl get pvc fresco-pvc
+		○ Expected output:
+Copy
+NAME         STATUS   VOLUME      CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+fresco-pvc   Bound    fresco-pv   100Mi      RWO            manual         10s
+	6. Modify the Nginx Pod to Use the PVC:
+		○ Update the fresco-nginx-pod.yaml file to include the PVC:
+yaml
+Copy
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fresco-nginx-pod
+spec:
+  containers:
+    - name: fresco-nginx-container
+      image: nginx
+      env:
+        - name: SERVER_URL_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: fresco-config
+              key: SERVER_URL
+      volumeMounts:
+        - name: secret-volume
+          mountPath: /etc/test
+          readOnly: true
+        - name: pvc-volume
+          mountPath: /usr/share/nginx/html
+  volumes:
+    - name: secret-volume
+      secret:
+        secretName: fresco-secret
+    - name: pvc-volume
+      persistentVolumeClaim:
+        claimName: fresco-pvc
+	7. Apply the Updated Pod:
+		○ Apply the updated YAML file:
+bash
+Copy
+kubectl apply -f fresco-nginx-pod.yaml
+	8. Verify the PVC is Mounted:
+		○ Check if the PVC is mounted correctly:
+bash
+Copy
+kubectl describe pod fresco-nginx-pod
+
+Step 5: RBAC (Role-Based Access Control)
+	1. Create a Namespace:
+		○ Create a namespace named dev:
+bash
+Copy
+kubectl create namespace dev
+	2. Create a Private Key:
+		○ Generate a private key named emp.key:
+bash
+Copy
+openssl genrsa -out emp.key 2048
+	3. Create a Certificate Signing Request (CSR):
+		○ Generate a CSR named emp.csr:
+bash
+Copy
+openssl req -new -key emp.key -out emp.csr -subj "/CN=emp/O=dev"
+	4. Approve the CSR and Generate a Certificate:
+		○ Approve the CSR and generate a certificate named emp.crt:
+bash
+Copy
+openssl x509 -req -in emp.csr -CA ~/.minikube/ca.crt -CAkey ~/.minikube/ca.key -CAcreateserial -out emp.crt -days 365
+	5. Set Credentials for the User emp:
+		○ Set credentials for the user emp:
+bash
+Copy
+kubectl config set-credentials emp --client-certificate=emp.crt --client-key=emp.key
+	6. Create a Context for the User emp:
+		○ Create a context named dev-ctx:
+bash
+Copy
+kubectl config set-context dev-ctx --cluster=minikube --namespace=dev --user=emp
+	7. Create a Role:
+		○ Create a role named emp-role:
+yaml
+Copy
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: dev
+  name: emp-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "deployments"]
+  verbs: ["get", "list"]
+		○ Apply the role:
+bash
+Copy
+kubectl apply -f emp-role.yaml
+	8. Bind the Role to the User emp:
+		○ Create a role binding:
+yaml
+Copy
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: emp-role-binding
+  namespace: dev
+subjects:
+- kind: User
+  name: emp
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: emp-role
+  apiGroup: rbac.authorization.k8s.io
+		○ Apply the role binding:
+bash
+Copy
+kubectl apply -f emp-role-binding.yaml
+	9. Verify RBAC Configuration:
+		○ Switch to the dev-ctx context:
+bash
+Copy
+kubectl config use-context dev-ctx
+		○ Verify access:
+bash
+Copy
+kubectl get pods
+kubectl get deployments
+
+This is the complete solution for the Kubernetes hands-on exercise. Let me know if you need further assistance! 🚀
