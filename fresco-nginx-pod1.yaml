@@ -14,7 +14,7 @@ spec:
               key: SERVER_URL
       volumeMounts:
         - name: secret-volume
-          mountPath: /etc/test
+          mountPath: "/etc/test"
           readOnly: true
   volumes:
     - name: secret-volume
