@@ -13,15 +13,14 @@ spec:
               name: fresco-config
               key: SERVER_URL
       volumeMounts:
-        - name: secret-volume
-          mountPath: /etc/test
-          readOnly: true
+        - name: fresco-secret
+          mountPath: "/etc/test"
         - name: pvc-volume
-          mountPath: /usr/share/nginx/html
+          mountPath: "/usr/share/nginx/html"
   volumes:
-    - name: secret-volume
+    - name: fresco-secret
       secret:
         secretName: fresco-secret
-    - name: pvc-volume
+    - name: fresco-pvc
       persistentVolumeClaim:
         claimName: fresco-pvc
