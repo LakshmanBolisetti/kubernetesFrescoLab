@@ -4,6 +4,6 @@ metadata:
   namespace: dev
   name: emp-role
 rules:
-- apiGroups: [""]
-  resources: ["pods", "deployments"]
+- apiGroups: ["", "extensions", "apps"]
+  resources: ["deployments" , "pods"]
   verbs: ["get", "list"]
