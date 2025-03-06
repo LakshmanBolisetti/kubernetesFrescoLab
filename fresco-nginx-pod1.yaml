@@ -13,10 +13,9 @@ spec:
               name: fresco-config
               key: SERVER_URL
       volumeMounts:
-        - name: secret-volume
+        - name: fresco-secret
           mountPath: "/etc/test"
-          readOnly: true
   volumes:
-    - name: secret-volume
+    - name: fresco-secret
       secret:
         secretName: fresco-secret
